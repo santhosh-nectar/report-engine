@@ -13,8 +13,12 @@ function getDateRange(offsetDays) {
   return { startDate: start.getTime(), endDate: end.getTime() };
 }
 
-export async function fetchMergedEnergyData() {
+export async function fetchMergedEnergyData(period, domain, groupBy, type) {
   try {
+    if (!period || !domain || !groupBy || !type) {
+      throw new Error("Missing required parameters");
+    }
+
     const headers = await getAuthHeaders();
     const { startDate: yStart, endDate: yEnd } = getDateRange(1); // Yesterday
     const { startDate: lwStart, endDate: lwEnd } = getDateRange(8); // Last Week
@@ -25,12 +29,12 @@ export async function fetchMergedEnergyData() {
         axios.post(
           AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
-            period: "DAILY",
-            domain: "americana",
+            period,
+            domain,
             startDate: yStart,
             endDate: yEnd,
-            groupBy: "meter",
-            type: "LVPMeter",
+            groupBy,
+            type,
             includeRaw: true,
           },
           { headers }
@@ -39,12 +43,12 @@ export async function fetchMergedEnergyData() {
         axios.post(
           AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
-            period: "DAILY",
-            domain: "americana",
+            period,
+            domain,
             startDate: lwStart,
             endDate: lwEnd,
-            groupBy: "meter",
-            type: "LVPMeter",
+            groupBy,
+            type,
             includeRaw: true,
           },
           { headers }
@@ -53,12 +57,12 @@ export async function fetchMergedEnergyData() {
         axios.post(
           AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
-            period: "DAILY",
-            domain: "americana",
+            period,
+            domain,
             startDate: dbStart,
             endDate: dbEnd,
-            groupBy: "meter",
-            type: "LVPMeter",
+            groupBy,
+            type,
             includeRaw: true,
           },
           { headers }
@@ -67,16 +71,23 @@ export async function fetchMergedEnergyData() {
         axios.post(
           AMERICANA_ENPOINTS.SITES_API,
           {
-            domain: "americana",
+            domain,
             type: "Site",
             order: "asc",
             sortField: "name",
-            limit: 100,
-            page: 1,
           },
           { headers }
         ),
       ]);
+
+    //Bench Mark API
+    // axios.post(AMERICANA_ENPOINTS.BENCHMARK_API, {
+    //   domain: "americana",
+    //   sites: ["sdfse23r2n3rdfsdfoij23ef"],
+    //   types: "LVPMeter",
+    //   points: ["Energy Consumption Daily"],
+    //   months: [1, 2, 3],
+    // });
 
     const yData = yesterdayRes.data || [];
     const lwData = lastWeekRes.data || [];

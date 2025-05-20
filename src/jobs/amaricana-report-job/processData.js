@@ -6,9 +6,14 @@ import { fetchMergedEnergyData } from "../../services/reports/americana.report.s
 const SIGNIFICANT_CHANGE_THRESHOLD = 0;
 
 // Process data for reporting
-export async function processData() {
+export async function processData(period, domain, groupBy, type) {
   console.log("Fetching data from API...");
-  const { report1, report2, report3 } = await fetchMergedEnergyData();
+  const { report1, report2, report3 } = await fetchMergedEnergyData(
+    period,
+    domain,
+    groupBy,
+    type
+  );
 
   // Get date information
   const yesterday = new Date();
