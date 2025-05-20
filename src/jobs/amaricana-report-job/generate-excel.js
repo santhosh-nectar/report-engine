@@ -643,54 +643,61 @@ export async function createExcelReport(data, chartPaths) {
       header: "Area (sqm)",
       key: "area",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: `Yesterday (${data.dates.yesterday})`,
       key: "yesterday",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: `Day Before (${data.dates.dayBeforeYesterday})`,
       key: "dayBefore",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: "Yesterday Intensity",
       key: "yesterdayIntensity",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: "Day Before Intensity",
       key: "dayBeforeIntensity",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: "Daily Change (%)",
       key: "dayChange",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: `Last Week (${data.dates.lastWeekSameDay})`,
       key: "lastWeek",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
     {
       header: "Weekly Change (%)",
       key: "weekChange",
       width: 26,
-      style: { numFmt: "0.0000" },
+      style: { numFmt: "0.00" },
     },
   ];
 
   // Format the header row
   formatTableHeaders(storeSheet, storeSheet.getRow(1));
+
+  // Sort storeDetails by Store Name alphabetically
+  data.storeDetails.sort((a, b) => {
+    const areaA = parseFloat(a["Area (sqm)"]) || 0;
+    const areaB = parseFloat(b["Area (sqm)"]) || 0;
+    return areaB - areaA;
+  });
 
   // Add store data with proper data types for sorting
   data.storeDetails.forEach((store) => {
@@ -755,11 +762,11 @@ export async function createExcelReport(data, chartPaths) {
   // Format all data rows
   formatTableRows(storeSheet, 2, storeSheet.rowCount);
 
-  // Apply autoFilter to all columns - this enables Excel's built-in filtering
-  storeSheet.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: storeSheet.columns.length },
-  };
+  // // Apply autoFilter to all columns - this enables Excel's built-in filtering
+  // storeSheet.autoFilter = {
+  //   from: { row: 1, column: 1 },
+  //   to: { row: 1, column: storeSheet.columns.length },
+  // };
 
   // Add conditional formatting to highlight high intensity values
   storeSheet.addConditionalFormatting({
@@ -781,29 +788,6 @@ export async function createExcelReport(data, chartPaths) {
     ],
   });
 
-  // Add a table style for better filtering UI
-  try {
-    storeSheet.addTable({
-      name: "StoreDetailsTable",
-      ref: `A1:K${storeSheet.rowCount}`,
-      headerRow: true,
-      totalsRow: false,
-      style: {
-        theme: "TableStyleMedium2",
-        showRowStripes: true,
-      },
-      columns: storeSheet.columns.map((col) => ({
-        name: col.header,
-        filterButton: true,
-      })),
-    });
-  } catch (error) {
-    console.warn(
-      "Table feature not fully supported, using standard autoFilter instead:",
-      error.message
-    );
-  }
-
   // Adjust column widths
   dayComparisonSheet.columns.forEach((column, idx) => {
     if (idx == 3) {
@@ -822,7 +806,6 @@ export async function createExcelReport(data, chartPaths) {
   });
 
   // Generate Excel buffer instead of saving to file
-  console.log("Generating Excel buffer...");
   const buffer = await workbook.xlsx.writeBuffer();
 
   // Clean up chart files
