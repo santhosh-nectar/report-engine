@@ -1,15 +1,8 @@
 import axios from "axios";
 import { formatDate } from "date-fns";
-import { calcPercentageChange } from "../utils/util.calculatePercentage.js";
-
-const CONSUMPTION_API =
-  "https://assets.nectarit.com:8280/ems-report-pro/1.0.0/consumption/filter/data";
-const SITES_API =
-  "https://assets.nectarit.com:8280/ems-site-manager/1.0.0/sites/search/pagination?extendsFlag=true&tenantExtends=true";
-
-export const headers = {
-  Authorization: `Bearer 37164b0e-036b-3c58-9392-8a72030bb30e`,
-};
+import { calculatePercentageChange } from "../../utils/util.calculatePercentage.js";
+import { AMERICANA_ENPOINTS } from "../endpoints/americnana-endpoints.js";
+import { getAuthHeaders } from "../auth/auth.service.js";
 
 function getDateRange(offsetDays) {
   const start = new Date();
@@ -22,6 +15,7 @@ function getDateRange(offsetDays) {
 
 export async function fetchMergedEnergyData() {
   try {
+    const headers = await getAuthHeaders();
     const { startDate: yStart, endDate: yEnd } = getDateRange(1); // Yesterday
     const { startDate: lwStart, endDate: lwEnd } = getDateRange(8); // Last Week
     const { startDate: dbStart, endDate: dbEnd } = getDateRange(2); // Day Before Yesterday
@@ -29,10 +23,10 @@ export async function fetchMergedEnergyData() {
     const [yesterdayRes, lastWeekRes, dayBeforeRes, siteRes] =
       await Promise.all([
         axios.post(
-          CONSUMPTION_API,
+          AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
             period: "DAILY",
-            community: "americanaksa",
+            domain: "americana",
             startDate: yStart,
             endDate: yEnd,
             groupBy: "meter",
@@ -43,10 +37,10 @@ export async function fetchMergedEnergyData() {
         ),
 
         axios.post(
-          CONSUMPTION_API,
+          AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
             period: "DAILY",
-            community: "americanaksa",
+            domain: "americana",
             startDate: lwStart,
             endDate: lwEnd,
             groupBy: "meter",
@@ -57,10 +51,10 @@ export async function fetchMergedEnergyData() {
         ),
 
         axios.post(
-          CONSUMPTION_API,
+          AMERICANA_ENPOINTS.CONSUMPTION_API,
           {
             period: "DAILY",
-            community: "americanaksa",
+            domain: "americana",
             startDate: dbStart,
             endDate: dbEnd,
             groupBy: "meter",
@@ -71,7 +65,7 @@ export async function fetchMergedEnergyData() {
         ),
 
         axios.post(
-          SITES_API,
+          AMERICANA_ENPOINTS.SITES_API,
           {
             domain: "americana",
             type: "Site",
@@ -115,12 +109,14 @@ export async function fetchMergedEnergyData() {
       const sourceTagPath = baseEntry?.entity?.data?.sourceTagPath || "";
       const siteId = getSiteIdentifierFromTagPath(sourceTagPath);
       const siteMeta = siteMap.get(siteId) || {};
-
       const { countryName, stateName } =
         extractCountryAndStateFromTagPath(sourceTagPath);
-      const siteName = siteMeta.name || siteMeta.displayName || "Unknown";
-      const area = siteMeta.area || siteMeta.gfa || 0;
-
+      const siteName =
+        getStoreNameFromTagPath(sourceTagPath) ||
+        siteMeta.name ||
+        siteMeta.displayName ||
+        "Unknown";
+      const area = siteMeta.area ?? 0;
       const common = {
         meterId,
         meterName: baseEntry?.entity?.data?.displayName || "Unknown",
@@ -191,6 +187,16 @@ function getSiteIdentifierFromTagPath(sourceTagPathString) {
   }
 }
 
+function getStoreNameFromTagPath(sourceTagPathString) {
+  try {
+    const path = JSON.parse(sourceTagPathString);
+    const tower = path.find((tag) => tag.type === "CommercialTower");
+    return tower?.name || "Unknown Store";
+  } catch (e) {
+    return "Unknown Store";
+  }
+}
+
 function extractCountryAndStateFromTagPath(tagPathStr) {
   let countryName = "Unknown";
   let stateName = "Unknown";
@@ -220,12 +226,12 @@ function generateStoreDetailsData(report) {
     const cd = store.consumptionDayBefore || 0;
     const cw = store.consumptionLastWeek || 0;
 
-    const dayChange = calcPercentageChange(cy, cd);
-    const weekChange = calcPercentageChange(cy, cw);
+    const dayChange = calculatePercentageChange(cy, cd);
+    const weekChange = calculatePercentageChange(cy, cw);
     const energyIntensity = area > 0 ? cy / area : 0;
 
     return {
-      "Store Name": store.meterName || "Unknown",
+      "Store Name": store.siteName || "Unknown",
       Country: store.country || "Unknown",
       State: store.state || "Unknown",
       "Area (sqm)": area,
