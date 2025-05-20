@@ -1,6 +1,4 @@
 import cron from "node-cron";
-import fs from "fs";
-import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { sendReportEmail } from "../../utils/email.js";
 import { DateTime } from "luxon";
@@ -12,10 +10,9 @@ export const jobStore = new Map();
 
 export function scheduleReportJob({
   cronTime,
-  email,
+  emails,
   timeZone,
   userLocalTime,
-  days,
   period,
   domain,
   groupBy,
@@ -23,7 +20,6 @@ export function scheduleReportJob({
 }) {
   const jobId = uuidv4();
 
-  // Parse cronTime fields (minute, hour, dayOfWeek)
   const [minute, hour, , , dayOfWeek] = cronTime.split(" ");
 
   const now = DateTime.utc();
@@ -38,32 +34,27 @@ export function scheduleReportJob({
     nextRun = nextRun.plus({ days: 1 });
   }
 
-  const adjustedCronTime = cronTime;
-
   console.log(`Scheduling job:
     - Local time: ${userLocalTime} (${timeZone})
-    - Cron expression: ${adjustedCronTime}
+    - Cron expression: ${cronTime}
     - Next run at: ${nextRun.toISO()}`);
 
+  // ✅ This closure must capture all required parameters
   const job = cron.schedule(
-    adjustedCronTime,
+    cronTime,
     async () => {
       console.log(
-        `Executing job ${jobId} for ${email} at ${new Date().toISOString()}`
+        `Executing job ${jobId} to ${emails.join(", ")} at ${new Date().toISOString()}`
       );
       try {
+        // ✅ These must be captured from the outer scope
         const processedData = await processData(period, domain, groupBy, type);
         const chartPaths = await generateCharts(processedData);
         const excelBuffer = await createExcelReport(processedData, chartPaths);
 
-        const filename = `report-${jobId}-${Date.now()}.xlsx`;
-        const filePath = path.join("output", filename);
-        fs.mkdirSync("output", { recursive: true });
-        fs.writeFileSync(filePath, excelBuffer);
-
-        console.log(`Report generated: ${filePath}`);
-        await sendReportEmail(email, filePath);
-        console.log(`Email sent to ${email}`);
+        console.log(`Report generated...`);
+        await sendReportEmail(emails, excelBuffer);
+        console.log(`Email sent to ${emails.join(", ")}`);
       } catch (error) {
         console.error(`Job ${jobId} failed:`, error.message);
       }
@@ -76,33 +67,13 @@ export function scheduleReportJob({
 
   jobStore.set(jobId, {
     job,
-    email,
+    emails,
     timeZone,
     userLocalTime,
     days: dayOfWeek,
     nextRun: nextRun.toISO(),
-    cronTime: adjustedCronTime,
+    cronTime,
   });
 
   return jobId;
-}
-
-// List all scheduled jobs
-export function listScheduledJobs() {
-  return Array.from(jobStore.entries()).map(([id, jobData]) => ({
-    id,
-    ...jobData,
-    running: jobData.job.task.isRunning(),
-  }));
-}
-
-// Cancel a job
-export function cancelJob(jobId) {
-  const jobData = jobStore.get(jobId);
-  if (jobData) {
-    jobData.job.stop();
-    jobStore.delete(jobId);
-    return true;
-  }
-  return false;
 }

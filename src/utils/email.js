@@ -6,19 +6,30 @@ import { AMERICANA_ENPOINTS } from "../services/endpoints/americnana-endpoints.j
 
 dotenv.config();
 
-export async function sendReportEmail(to, attachmentPath) {
+export async function sendReportEmail(emails, attachmentPath) {
   try {
     const headers = await getAuthHeaders();
-    const fileBuffer = fs.readFileSync(attachmentPath);
+    let fileBuffer;
+
+    if (Buffer.isBuffer(attachmentPath)) {
+      fileBuffer = attachmentPath;
+    } else if (typeof attachmentPath === "string") {
+      fileBuffer = fs.readFileSync(attachmentPath);
+    } else {
+      throw new Error(
+        "Invalid attachment input: must be a Buffer or file path string."
+      );
+    }
+
     const base64File = fileBuffer.toString("base64");
 
     const payload = {
-      toAddresses: to,
+      toAddresses: emails.join(","),
       ccAddresses: null,
       bccAddresses: null,
       content: `<div style="padding:20px;"><h1 style="color:#6c5dd3">Your Energy Report is Ready</h1><p>Please find the attached Excel report.</p></div>`,
       subject: "Scheduled Energy Consumption Report",
-      to: to.split("@")[0],
+      to: emails.join(","),
       emailTemplate: "BasicNotification.vm",
       url: null,
       userName: null,
