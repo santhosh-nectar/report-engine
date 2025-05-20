@@ -1,14 +1,14 @@
-import { Resend } from "resend";
 import dotenv from "dotenv";
 import fs from "fs";
 import axios from "axios";
+import { getAuthHeaders } from "../services/auth/auth.service.js";
+import { AMERICANA_ENPOINTS } from "../services/endpoints/americnana-endpoints.js";
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendReportEmail(to, attachmentPath) {
   try {
+    const headers = await getAuthHeaders();
     const fileBuffer = fs.readFileSync(attachmentPath);
     const base64File = fileBuffer.toString("base64");
 
@@ -18,7 +18,7 @@ export async function sendReportEmail(to, attachmentPath) {
       bccAddresses: null,
       content: `<div style="padding:20px;"><h1 style="color:#6c5dd3">Your Energy Report is Ready</h1><p>Please find the attached Excel report.</p></div>`,
       subject: "Scheduled Energy Consumption Report",
-      to: to.split("@")[0], // or some user-friendly name if available
+      to: to.split("@")[0],
       emailTemplate: "BasicNotification.vm",
       url: null,
       userName: null,
@@ -32,16 +32,12 @@ export async function sendReportEmail(to, attachmentPath) {
       model: null,
     };
 
-    const response = await axios.post(
-      "https://assets.nectarit.com:8280/notification/1.0.0/notification/email",
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer 37164b0e-036b-3c58-9392-8a72030bb30e`,
-        },
-      }
-    );
+    const response = await axios.post(AMERICANA_ENPOINTS.EMAIL_API, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+    });
 
     console.log("Email API Response:", response.status);
   } catch (err) {

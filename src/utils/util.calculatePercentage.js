@@ -1,4 +1,4 @@
-export function calcPercentageChange(newVal, oldVal) {
-  if (!oldVal || oldVal === 0) return 0;
-  return ((newVal - oldVal) / oldVal) * 100;
+export function calculatePercentageChange(current, previous) {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return ((current - previous) / previous) * 100;
 }
