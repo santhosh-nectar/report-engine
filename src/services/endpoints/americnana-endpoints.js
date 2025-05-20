@@ -5,4 +5,5 @@ export const AMERICANA_ENPOINTS = {
   SITES_API: `${BASE_URL}/ems-site-manager/1.0.0/sites/search/pagination?extendsFlag=true&tenantExtends=true`,
   LOGIN_API: `https://assets.nectarit.com/api/towa-integration/1.0.0/token/login`,
   EMAIL_API: `${BASE_URL}/notification/1.0.0/notification/email`,
+  BENCHMARK_API: `${BASE_URL}/ems-site-manager-v2/2.0.0/benchmark/list/month`,
 };

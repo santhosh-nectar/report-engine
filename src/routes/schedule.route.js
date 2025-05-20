@@ -10,7 +10,23 @@ import { DateTime } from "luxon";
 const router = express.Router();
 
 router.post("/", (req, res) => {
-  const { email, time, timeZone = "UTC", days = "daily" } = req.body;
+  const {
+    email,
+    time,
+    timeZone = "UTC",
+    days = "daily",
+    period,
+    domain,
+    groupBy,
+    type,
+  } = req.body;
+
+  // Validate required fields
+  if (!period || !domain || !groupBy || !type) {
+    return res.status(400).json({
+      error: "Missing required parameters: period, domain, groupBy, type",
+    });
+  }
 
   if (!email || !time) {
     return res.status(400).json({ error: "Both email and time are required." });
@@ -31,7 +47,7 @@ router.post("/", (req, res) => {
     if (days.toLowerCase() === "daily") {
       dayOfWeekField = "*";
     } else if (days.toLowerCase() === "weekdays") {
-      dayOfWeekField = "1-5"; // Monday to Friday
+      dayOfWeekField = "1-5";
     } else {
       return res.status(400).json({
         error:
@@ -84,6 +100,10 @@ router.post("/", (req, res) => {
       timeZone,
       userLocalTime: time,
       days: dayOfWeekField,
+      period,
+      domain,
+      groupBy,
+      type,
     });
 
     res.json({

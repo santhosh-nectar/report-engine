@@ -15,7 +15,11 @@ export function scheduleReportJob({
   email,
   timeZone,
   userLocalTime,
-  days, // optional, for metadata only
+  days,
+  period,
+  domain,
+  groupBy,
+  type,
 }) {
   const jobId = uuidv4();
 
@@ -48,7 +52,7 @@ export function scheduleReportJob({
         `Executing job ${jobId} for ${email} at ${new Date().toISOString()}`
       );
       try {
-        const processedData = await processData();
+        const processedData = await processData(period, domain, groupBy, type);
         const chartPaths = await generateCharts(processedData);
         const excelBuffer = await createExcelReport(processedData, chartPaths);
 
